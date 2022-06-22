@@ -376,6 +376,7 @@ F4_DrawFileBar(Application_Links *app, View_ID view_id, Buffer_ID buffer, Face_I
         if (HasFlag(dirty, DirtyState_UnsavedChanges)){
             string_append(&str, string_u8_litexpr("*"));
         }
+        //~ NOTE(para): this should only happen when buffer_reopen fails
         if (HasFlag(dirty, DirtyState_UnloadedChanges)){
             string_append(&str, string_u8_litexpr("!"));
         }
@@ -410,6 +411,20 @@ function void
 F4_Render(Application_Links *app, Frame_Info frame_info, View_ID view_id)
 {
     F4_RecentFiles_RefreshView(app, view_id);
+    
+    //~ NOTE(para): reload buffers when an unloaded change is detected
+    {
+        Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+        
+        while(buffer != 0) {
+            Dirty_State dirty = buffer_get_dirty_state(app, buffer);
+            if(HasFlag(dirty, DirtyState_UnloadedChanges)) {
+                buffer_reopen(app, buffer, 0);
+            }
+            
+            buffer = get_buffer_next(app, buffer, 0);
+        }
+    }
     
     ProfileScope(app, "[Fleury] Render");
     Scratch_Block scratch(app);

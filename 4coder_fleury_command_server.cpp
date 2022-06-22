@@ -486,7 +486,14 @@ int sts_net_check_socket_set(sts_net_set_t* set, const float timeout) {
     FD_ZERO(&fds);
     for (i = 0, max_fd = 0; i < STS_NET_SET_SOCKETS; ++i) {
         if (set->sockets[i]) {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4389)
             FD_SET(set->sockets[i]->fd, &fds);
+#pragma warning(pop)
+#else
+            FD_SET(set->sockets[i]->fd, &fds);
+#endif // _MSC_VER
             if (set->sockets[i]->fd > max_fd) {
                 max_fd = set->sockets[i]->fd;
             }
