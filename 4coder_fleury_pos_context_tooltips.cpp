@@ -11,6 +11,7 @@ _F4_PosContext_RenderDefinitionTokens(Application_Links *app, Face_ID face,
     
     Token_Iterator_Array it = token_iterator_pos(0, &tokens, 0);
     b32 found_first_open_paren = 0;
+    i32 template_nest = 0;
     for(int arg_idx = 0;;)
     {
         Token *token = token_it_read(&it);
@@ -23,7 +24,19 @@ _F4_PosContext_RenderDefinitionTokens(Application_Links *app, Face_ID face,
         else
         {
             ARGB_Color color = finalize_color(defcolor_text_default, 0);
-            if(token->kind == TokenBaseKind_StatementClose)
+            if (token->kind == TokenBaseKind_Operator)
+            {
+                String_Const_u8 str = string_substring(backing_string, Ii64(token));
+                if(string_match(str, S8Lit("<")))
+                {
+                    template_nest += 1;
+                }
+                else if(string_match(str, S8Lit(">")))
+                {
+                    template_nest -= 1;
+                }
+            }
+            else if(token->kind == TokenBaseKind_StatementClose && template_nest == 0)
             {
                 String_Const_u8 str = string_substring(backing_string, Ii64(token));
                 if(string_match(str, S8Lit(",")))
