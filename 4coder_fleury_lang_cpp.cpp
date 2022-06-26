@@ -1,4 +1,3 @@
-
 internal void
 F4_CPP_ParseMacroDefinition(F4_Index_ParseCtx *ctx)
 {
@@ -474,6 +473,18 @@ internal F4_LANGUAGE_INDEXFILE(F4_CPP_IndexFile)
     }
 }
 
+// NOTE(para): testing input
+/*
+template<int,int>
+struct Thing {};
+void my_fun(Thing<1,2> const&, Thing<1, 2> const&);
+my_fun(Thing<1,2>{},Thing<1,2>{});
+
+template<size_t N>
+void my_new_fun(std::array<std::array<int, N>, N> const&, int abc);
+my_new_fun({{1, 2, 3}, {4, 5, 6}}, 33);
+*/
+
 internal F4_LANGUAGE_POSCONTEXT(F4_CPP_PosContext)
 {
     int count = 0;
@@ -485,14 +496,20 @@ internal F4_LANGUAGE_POSCONTEXT(F4_CPP_PosContext)
     
     // NOTE(rjf): Search for left parentheses (function call or macro invocation).
     {
+        
         int paren_nest = 0;
+        int template_nest = 0;
+        // TODO(para): this requires extra work! When we open a brace, a note
+        // is inserted (F4_Index_NoteKind_Decl) which cancels out the tooltip
+        // as you're inside braces.
+        int brace_nest = 0;
         int arg_idx = 0;
         for(int i = 0; count < 4; i += 1)
         {
             Token *token = token_it_read(&it);
             if(token)
             {
-                if(paren_nest == 0 &&
+                if(paren_nest == 0 && template_nest == 0 && brace_nest == 0 &&
                    token->sub_kind == TokenCppKind_ParenOp &&
                    token_it_dec_non_whitespace(&it))
                 {
@@ -504,6 +521,22 @@ internal F4_LANGUAGE_POSCONTEXT(F4_CPP_PosContext)
                         arg_idx = 0;
                     }
                 }
+                else if(token->sub_kind == TokenCppKind_BraceOp)
+                {
+                    brace_nest -= 1;
+                }
+                else if(token->sub_kind == TokenCppKind_BraceCl && i > 0)
+                {
+                    brace_nest += 1;
+                }
+                else if(token->sub_kind == TokenCppKind_Less)
+                {
+                    template_nest -= 1;
+                }
+                else if(token->sub_kind == TokenCppKind_Grtr && i > 0)
+                {
+                    template_nest += 1;
+                }
                 else if(token->sub_kind == TokenCppKind_ParenOp)
                 {
                     paren_nest -= 1;
@@ -512,7 +545,7 @@ internal F4_LANGUAGE_POSCONTEXT(F4_CPP_PosContext)
                 {
                     paren_nest += 1;
                 }
-                else if(token->sub_kind == TokenCppKind_Comma && i > 0 && paren_nest == 0)
+                else if(token->sub_kind == TokenCppKind_Comma && i > 0 && paren_nest == 0 && template_nest == 0 && brace_nest == 0)
                 {
                     arg_idx += 1;
                 }
