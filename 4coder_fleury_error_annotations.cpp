@@ -70,6 +70,7 @@ F4_RenderErrorAnnotations(Application_Links *app, Buffer_ID buffer,
                 
                 String_Const_u8 jump_line = push_buffer_line(app, scratch, jump_buffer, jump_line_number);
                 
+                b32 warning = 0;
                 // NOTE(rjf): Remove file part of jump line.
                 {
                     u64 index = string_find_first(jump_line, string_u8_litexpr("error"), StringMatch_CaseInsensitive);
@@ -79,6 +80,8 @@ F4_RenderErrorAnnotations(Application_Links *app, Buffer_ID buffer,
                         if(index == jump_line.size)
                         {
                             index = 0;
+                        } else {
+                            warning = 1;
                         }
                     }
                     jump_line.str += index;
@@ -101,7 +104,7 @@ F4_RenderErrorAnnotations(Application_Links *app, Buffer_ID buffer,
                         Vec2_f32 draw_position =
                         {
                             region.x1 - metrics.max_advance*jump_line.size -
-                                (y.max-y.min)/2 - metrics.line_height/2,
+                            (y.max-y.min)/2 - metrics.line_height/2,
                             y.min + (y.max-y.min)/2 - metrics.line_height/2,
                         };
                         
@@ -110,7 +113,7 @@ F4_RenderErrorAnnotations(Application_Links *app, Buffer_ID buffer,
                             draw_position.x = last_character_on_line_rect.x1 + 30;
                         }
                         
-                        draw_string(app, face, jump_line, draw_position, fcolor_id(fleury_color_error_annotation));
+                        draw_string(app, face, jump_line, draw_position, warning == 0 ? fcolor_id(fleury_color_error_annotation) : fcolor_id(fleury_color_warning_annotation));
                         
                         Mouse_State mouse_state = get_mouse_state(app);
                         if(mouse_state.x >= region.x0 && mouse_state.x <= region.x1 &&

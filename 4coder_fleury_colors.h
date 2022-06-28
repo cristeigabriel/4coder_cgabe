@@ -28,6 +28,7 @@ CUSTOM_ID(colors, fleury_color_comment_user_name);
 CUSTOM_ID(colors, fleury_color_lego_grab);
 CUSTOM_ID(colors, fleury_color_lego_splat);
 CUSTOM_ID(colors, fleury_color_error_annotation);
+CUSTOM_ID(colors, fleury_color_warning_annotation);
 
 static ARGB_Color F4_ARGBFromID(Color_Table table, Managed_ID id, int subindex);
 static ARGB_Color F4_ARGBFromID(Color_Table table, Managed_ID id);
