@@ -606,11 +606,22 @@ F4_Render(Application_Links *app, Frame_Info frame_info, View_ID view_id)
     
     // NOTE(allen): file bar
     b64 showing_file_bar = false;
+    // NOTE(para): added this
+    b64 file_bars_top = false;
     if(view_get_setting(app, view_id, ViewSetting_ShowFileBar, &showing_file_bar) && showing_file_bar)
     {
-        Rect_f32_Pair pair = layout_file_bar_on_top(region, line_height);
-        F4_DrawFileBar(app, view_id, buffer, face_id, pair.min);
-        region = pair.max;
+        view_get_setting(app, view_id, ViewSetting_FileBarsTop, &file_bars_top);
+        if (!file_bars_top)
+        {
+            Rect_f32_Pair pair = layout_file_bar_on_bot(region, line_height);
+            F4_DrawFileBar(app, view_id, buffer, face_id, pair.max);
+            region = pair.min;
+        } else 
+        {
+            Rect_f32_Pair pair = layout_file_bar_on_top(region, line_height);
+            F4_DrawFileBar(app, view_id, buffer, face_id, pair.min);
+            region = pair.max;
+        }
     }
     
     Buffer_Scroll scroll = view_get_buffer_scroll(app, view_id);
