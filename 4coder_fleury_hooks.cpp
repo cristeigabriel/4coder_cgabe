@@ -61,7 +61,7 @@ Win_Audio_System::Win_Audio_System()
     Co_Init coinit;
     Co_Init_New(&coinit);
     
-    if (!coinit.result)
+    if (FAILED(coinit.result))
         return;
     
     Com_Ptr<IMMDeviceEnumerator> device_enumerator;
