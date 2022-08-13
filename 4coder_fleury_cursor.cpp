@@ -11,6 +11,8 @@ enum Cursor_Type
 	cursor_insert,
 	cursor_open_range,
 	cursor_close_range,
+    // NOTE(para): I know this is a horrible hack, and I'll owe it
+    cursor_both_range_for_notepad_mode_stupid_hack_because_I_love_how_it_looks
 };
 
 function void
@@ -21,7 +23,7 @@ C4_RenderCursorSymbolThingy(Application_Links *app, Rect_f32 rect,
     f32 line_height = rect.y1 - rect.y0;
     f32 bracket_width = 0.5f*line_height;
     
-    if(type == cursor_open_range)
+    if(type == cursor_open_range || type == cursor_both_range_for_notepad_mode_stupid_hack_because_I_love_how_it_looks)
     {
         Rect_f32 start_top, start_side, start_bottom;
         
@@ -47,7 +49,7 @@ C4_RenderCursorSymbolThingy(Application_Links *app, Rect_f32 rect,
         
         // draw_rectangle(app, start_bottom, start_color);
     }
-    else if(type == cursor_close_range)
+    if(type == cursor_close_range || type == cursor_both_range_for_notepad_mode_stupid_hack_because_I_love_how_it_looks)
 	{
 		Rect_f32 end_top, end_side, end_bottom;
         
@@ -335,8 +337,10 @@ F4_Cursor_RenderNotepadStyle(Application_Links *app, View_ID view_id, b32 is_act
             {
                 DoTheCursorInterpolation(app, frame_info, &global_cursor_rect, &global_last_cursor_rect, rect);
             }
-            draw_rectangle(app, global_cursor_rect, roundness, ghost_color);
-            draw_rectangle(app, rect, roundness, cursor_color);
+            
+            // NOTE(para): again,  there's no technological motive for this, I just like how the caret looks that way, and it gives me some visual intuition for buffer text effects too
+            C4_RenderCursorSymbolThingy(app, global_cursor_rect, 0, 2, ghost_color, cursor_both_range_for_notepad_mode_stupid_hack_because_I_love_how_it_looks);
+            C4_RenderCursorSymbolThingy(app, rect, 0, 2, cursor_color, cursor_both_range_for_notepad_mode_stupid_hack_because_I_love_how_it_looks);
         }
     }
 }

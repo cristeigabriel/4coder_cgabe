@@ -550,6 +550,15 @@ CUSTOM_DOC("Fleury startup event")
             buffer_set_setting(app, buffer, BufferSetting_ReadOnly, true);
         }
         
+        // NOTE(para): open RAVE buffer
+        {
+            Buffer_ID buffer = create_buffer(app, string_u8_litexpr("*rave*"),
+                                             BufferCreate_NeverAttachToFile |
+                                             BufferCreate_AlwaysNew);
+            buffer_set_setting(app, buffer, BufferSetting_Unimportant, true);
+            buffer_set_setting(app, buffer, BufferSetting_ReadOnly, true);
+        }
+        
         // NOTE(rjf): Open lego buffer.
         {
             Buffer_ID buffer = create_buffer(app, string_u8_litexpr("*lego*"),

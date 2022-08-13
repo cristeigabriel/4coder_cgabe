@@ -1,5 +1,93 @@
 //~ NOTE(rjf): Buffer Render
 
+#pragma once
+
+// API interfaces
+#define WIN32_LEAN_AND_MEAN
+#define WIN32_NO_STATUS
+#include <Windows.h>
+
+#include<string>
+
+// Co* stuff
+#pragma comment(lib, "Ole32.lib")
+#include <combaseapi.h>
+
+// Audio stuff
+#include <mmdeviceapi.h>
+#include <audiopolicy.h>
+#include <endpointvolume.h>
+#include <hidusage.h>
+
+// API interface code to avoid making binary size even bigger
+struct Co_Init
+{
+    HRESULT result;
+    
+    ~Co_Init()
+    {
+        if (SUCCEEDED(result))
+            CoUninitialize();
+    }
+};
+
+void Co_Init_New(Co_Init *handle)
+{
+    handle->result = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+}
+
+template <typename T>
+struct Com_Ptr
+{
+    T *obj;
+    ~Com_Ptr()
+    {
+        if (obj)
+            obj->Release();
+    }
+};
+
+// Audio "system"
+struct Win_Audio_System
+{
+    Win_Audio_System();
+    
+    Com_Ptr<IAudioMeterInformation> meter;
+} inline audio_system;
+
+// TODO(para): maybe do some real handling of errors
+Win_Audio_System::Win_Audio_System()
+{
+    Co_Init coinit;
+    Co_Init_New(&coinit);
+    
+    if (!coinit.result)
+        return;
+    
+    Com_Ptr<IMMDeviceEnumerator> device_enumerator;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void **)&device_enumerator.obj)))
+        return;
+    
+    Com_Ptr<IMMDevice> audio_renderer;
+    if (FAILED(device_enumerator.obj->GetDefaultAudioEndpoint(EDataFlow::eRender, ERole::eMultimedia, &audio_renderer.obj)))
+        return;
+    
+    if (FAILED(audio_renderer.obj->Activate(__uuidof(IAudioMeterInformation), CLSCTX_ALL, NULL, (void **)&meter.obj)))
+        return;
+}
+
+// Getter for peak value
+float Win_Audio_System_GetPeakValue(Win_Audio_System *handle)
+{
+    float peak;
+    handle->meter.obj->GetPeakValue(&peak);
+    return peak;
+}
+
+// NOTE(para): heresy...
+#include <deque>
+inline std::deque<float> audio_peaks;
+
 function void
 F4_RenderBuffer(Application_Links *app, View_ID view_id, Face_ID face_id,
                 Buffer_ID buffer, Text_Layout_ID text_layout_id,
@@ -441,10 +529,15 @@ F4_Render(Application_Links *app, Frame_Info frame_info, View_ID view_id)
     
     //~ NOTE(rjf): Draw background.
     {
+        bool match = false;
         ARGB_Color color = fcolor_resolve(fcolor_id(defcolor_back));
         if(string_match(buffer_name, string_u8_litexpr("*compilation*")))
         {
             color = color_blend(color, 0.5f, 0xff000000);
+        }
+        else if(string_match(buffer_name, string_u8_litexpr("*rave*")))
+        {
+            match = true;
         }
         // NOTE(rjf): Inactive background color.
         else if(is_active_view == 0)
@@ -456,6 +549,39 @@ F4_Render(Application_Links *app, Frame_Info frame_info, View_ID view_id)
             }
         }
         draw_rectangle(app, region, 0.f, color);
+        // draw rave before margin
+        if (match)
+        {
+            if (audio_peaks.size()>30)
+                audio_peaks.pop_front();
+            
+            audio_peaks.push_back(Win_Audio_System_GetPeakValue(&audio_system));
+            
+            Rect_f32 bounds = region;
+            // take goal width for every section
+            float width = (bounds.x1-bounds.x0)/audio_peaks.size();
+            // take total height
+            float height = bounds.y1-bounds.y0;
+            // instanciate bounds before iter as first seciton
+            bounds.x1 = width;
+            // keep track if there's any audio to update
+            bool animate = false;
+            for (int i = 0; i < audio_peaks.size(); ++i)
+            {
+                if (audio_peaks[i] > 0)
+                    animate = true;
+                bounds.y0 = bounds.y1 - height*audio_peaks[i];
+                ARGB_Color col = fcolor_resolve(fcolor_argb(1.f,1.f,1.f,1.f));
+                draw_rectangle(app, bounds, 30, col);
+                bounds.x0 += width;
+                bounds.x1 += width;
+            }
+            // make 4coder update if there's audio peaks to display
+            // NOTE(para): only happens if ur inside the buffer, also
+            if (animate)
+                animate_in_n_milliseconds(app, 0);
+        }
+        
         draw_margin(app, view_rect, region, color);
     }
     
